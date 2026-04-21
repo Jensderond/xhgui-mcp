@@ -1,41 +1,83 @@
 # xhgui-mcp
 
-MCP server for querying XHGui profiling data.
+MCP server that gives AI agents structured, pre-summarized access to [XHGui](https://github.com/perftools/xhgui) profiling data.
 
-## Status
+Two tools today:
 
-Pre-release. See `docs/design.md`.
+- `list_runs` — recent runs, with filters (url, url_contains, method, time range, min wall).
+- `get_run_summary` — one call returns totals + top-N by inclusive / self time + optional hotspot matches for a given run.
+
+Status: pre-release. Design notes in `docs/design.md`.
 
 ## Environment variables
 
 | Var | Required | Example |
 |---|---|---|
 | `XHGUI_BACKEND` | yes | `pdo` |
-| `XHGUI_PDO_DSN` | if pdo | `mysql://db:db@127.0.0.1:32789/xhgui` |
-| `XHGUI_HOTSPOT_PATTERNS` | no | `ElementQuery::one,Container::build` |
+| `XHGUI_PDO_DSN` | if `pdo` | `mysql://db:db@127.0.0.1:32789/xhgui` |
+| `XHGUI_HOTSPOT_PATTERNS` | no | `ElementQuery::one,Container::build,renderTemplate` (CSV of symbol substrings) |
 
-## Running
+Only the PDO backend (MySQL/MariaDB) is implemented today. MongoDB support is planned.
 
+## Install
+
+### Local (no npm publish)
+
+    git clone <this repo> xhgui-mcp
+    cd xhgui-mcp
     npm install
     npm run build
-    XHGUI_BACKEND=pdo XHGUI_PDO_DSN=... node dist/server.js
+    npm link
 
-## Using with Claude Code (MSN-specific example)
+After `npm link`, `xhgui-mcp` is on your npm global bin and `npx xhgui-mcp` resolves it.
 
-Add to your Claude Code MCP config (e.g. `~/.claude/settings.json` under `mcpServers`, or the project-scoped `.mcp.json`):
+### After publish (future)
 
-    {
-      "mcpServers": {
-        "xhgui": {
-          "command": "node",
-          "args": ["/Users/jens/Sites/msn-website/xhgui-mcp/dist/server.js"],
-          "env": {
-            "XHGUI_BACKEND": "pdo",
-            "XHGUI_PDO_DSN": "mysql://db:db@127.0.0.1:32785/xhgui",
-            "XHGUI_HOTSPOT_PATTERNS": "ElementQuery::one,ElementQuery::all,internalExecute,getAttribute,Container::build,renderTemplate"
-          }
-        }
+    npx -y xhgui-mcp
+
+## Use with Claude Code
+
+```bash
+claude mcp add --transport stdio xhgui \
+  -e XHGUI_BACKEND=pdo \
+  -e XHGUI_PDO_DSN="mysql://db:db@127.0.0.1:32789/xhgui" \
+  -e XHGUI_HOTSPOT_PATTERNS="ElementQuery::one,ElementQuery::all,internalExecute,getAttribute,Container::build,renderTemplate" \
+  -- npx -y xhgui-mcp
+```
+
+Equivalent `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "xhgui": {
+      "command": "npx",
+      "args": ["-y", "xhgui-mcp"],
+      "env": {
+        "XHGUI_BACKEND": "pdo",
+        "XHGUI_PDO_DSN": "mysql://db:db@127.0.0.1:32789/xhgui",
+        "XHGUI_HOTSPOT_PATTERNS": "ElementQuery::one,ElementQuery::all,internalExecute,getAttribute,Container::build,renderTemplate"
       }
     }
+  }
+}
+```
 
-Find the mapped MariaDB port with `ddev describe` in the MSN project directory. The port changes when ddev is restarted, so update the DSN if calls start failing.
+## Use with ddev
+
+The MCP doesn't know about ddev — point the DSN at ddev's host-mapped DB port.
+
+    ddev describe | grep -i mariadb
+    # db:3306 -> 127.0.0.1:32789
+
+Use that host-side port in `XHGUI_PDO_DSN`. Note: the port reshuffles on `ddev restart`, so update the DSN if calls start returning connection errors.
+
+## Development
+
+    npm run dev      # tsc --watch
+    npm run build    # one-shot build + chmod +x dist/server.js
+    npm start        # node dist/server.js
+
+## License
+
+MIT.

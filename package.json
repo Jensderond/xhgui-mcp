@@ -6,10 +6,16 @@
   "bin": {
     "xhgui-mcp": "dist/server.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "docs/design.md"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/server.js",
     "start": "node dist/server.js",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "prepack": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
