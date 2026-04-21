@@ -5,6 +5,7 @@ import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprot
 import { loadConfig } from "./config.js";
 import type { Backend } from "./backends/types.js";
 import { PdoBackend } from "./backends/pdo.js";
+import { listRunsToolDefinition, runListRuns } from "./tools/listRuns.js";
 
 function log(obj: Record<string, unknown>): void {
   process.stderr.write(JSON.stringify({ ts: new Date().toISOString(), ...obj }) + "\n");
@@ -31,10 +32,28 @@ async function main(): Promise<void> {
     { capabilities: { tools: {} } }
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [] }));
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: [listRunsToolDefinition],
+  }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
-    throw new Error(`Unknown tool: ${req.params.name}`);
+    const started = Date.now();
+    try {
+      if (req.params.name === "list_runs") {
+        const result = await runListRuns(backend, req.params.arguments ?? {});
+        log({ event: "tool_ok", tool: req.params.name, duration_ms: Date.now() - started });
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      }
+      throw new Error(`Unknown tool: ${req.params.name}`);
+    } catch (err) {
+      log({
+        event: "tool_err",
+        tool: req.params.name,
+        duration_ms: Date.now() - started,
+        error: (err as Error).message,
+      });
+      throw err;
+    }
   });
 
   const transport = new StdioServerTransport();
