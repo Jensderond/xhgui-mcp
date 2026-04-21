@@ -10,25 +10,15 @@ import {
 } from "../format/hotspots.js";
 
 export const getRunSummaryInputSchema = z.object({
-  run_id: z.string().min(1),
-  top_n: z.number().int().positive().max(100).default(15),
+  run_id: z.string().min(1).describe("xhgui run id"),
+  top_n: z.number().int().positive().max(100).default(15)
+    .describe("How many top functions to return per list (1–100, default 15)"),
 });
 
 export type GetRunSummaryInput = z.infer<typeof getRunSummaryInputSchema>;
 
-export const getRunSummaryToolDefinition = {
-  name: "get_run_summary",
-  description:
-    "Summarize a single xhgui run: request totals, top functions by inclusive and self time, and optional hotspot matches.",
-  inputSchema: {
-    type: "object",
-    required: ["run_id"],
-    properties: {
-      run_id: { type: "string", description: "xhgui run id" },
-      top_n: { type: "number", description: "How many top functions to return per list (1–100, default 15)" },
-    },
-  },
-} as const;
+export const getRunSummaryDescription =
+  "Summarize a single xhgui run: request totals, top functions by inclusive and self time, and optional hotspot matches.";
 
 export interface GetRunSummaryOutput {
   url: string;
@@ -44,9 +34,8 @@ export interface GetRunSummaryOutput {
 export async function runGetRunSummary(
   backend: Backend,
   hotspotPatterns: string[],
-  rawInput: unknown
+  input: GetRunSummaryInput
 ): Promise<GetRunSummaryOutput> {
-  const input = getRunSummaryInputSchema.parse(rawInput);
   const run = await backend.getRun(input.run_id);
   if (!run) {
     throw new Error(`run_id not found: ${input.run_id}`);

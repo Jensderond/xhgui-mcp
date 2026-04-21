@@ -1,42 +1,28 @@
 import { z } from "zod";
 import type { Backend } from "../backends/types.js";
 
-export const listRunsInputSchema = z
-  .object({
-    url: z.string().optional(),
-    url_contains: z.string().optional(),
-    method: z.string().optional(),
-    since: z.string().datetime().optional(),
-    until: z.string().datetime().optional(),
-    min_wall_ms: z.number().nonnegative().optional(),
-    limit: z.number().int().positive().max(500).default(20),
-  })
-  .refine((v) => !(v.url !== undefined && v.url_contains !== undefined), {
-    message: "Pass either url or url_contains, not both",
-  });
+export const listRunsInputSchema = z.object({
+  url: z.string().optional().describe("Exact URL to match"),
+  url_contains: z.string().optional().describe("Substring to match against URL"),
+  method: z.string().optional().describe("HTTP method (GET, POST, …)"),
+  since: z.string().datetime().optional().describe("ISO-8601 lower bound for request time"),
+  until: z.string().datetime().optional().describe("ISO-8601 upper bound for request time"),
+  min_wall_ms: z.number().nonnegative().optional().describe("Minimum wall time in ms"),
+  limit: z.number().int().positive().max(500).default(20).describe("Max rows (1–500, default 20)"),
+});
 
 export type ListRunsInput = z.infer<typeof listRunsInputSchema>;
 
-export const listRunsToolDefinition = {
-  name: "list_runs",
-  description:
-    "List recent xhgui profiling runs, optionally filtered by URL (exact or substring), method, time range, or minimum wall time.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      url: { type: "string", description: "Exact URL to match" },
-      url_contains: { type: "string", description: "Substring to match against URL" },
-      method: { type: "string", description: "HTTP method (GET, POST, …)" },
-      since: { type: "string", description: "ISO-8601 lower bound for request time" },
-      until: { type: "string", description: "ISO-8601 upper bound for request time" },
-      min_wall_ms: { type: "number", description: "Minimum wall time in ms" },
-      limit: { type: "number", description: "Max rows (1–500, default 20)" },
-    },
-  },
-} as const;
+export const listRunsDescription =
+  "List recent xhgui profiling runs, optionally filtered by URL (exact or substring), method, time range, or minimum wall time.";
 
-export async function runListRuns(backend: Backend, rawInput: unknown): Promise<{ runs: Array<Record<string, unknown>> }> {
-  const input = listRunsInputSchema.parse(rawInput);
+export async function runListRuns(
+  backend: Backend,
+  input: ListRunsInput
+): Promise<{ runs: Array<Record<string, unknown>> }> {
+  if (input.url !== undefined && input.url_contains !== undefined) {
+    throw new Error("Pass either url or url_contains, not both");
+  }
   const runs = await backend.listRuns({
     url: input.url,
     urlContains: input.url_contains,
