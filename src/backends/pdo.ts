@@ -1,5 +1,5 @@
 import mysql from "mysql2/promise";
-import type { Backend, Run, RunFilter, RunMeta, UrlAggregate } from "./types.js";
+import type { Backend, FunctionStats, Run, RunFilter, RunMeta, UrlAggregate } from "./types.js";
 
 export class PdoBackend implements Backend {
   private pool: mysql.Pool;
@@ -69,8 +69,43 @@ export class PdoBackend implements Backend {
     }));
   }
 
-  async getRun(_runId: string): Promise<Run | null> {
-    throw new Error("PdoBackend.getRun not implemented yet");
+  async getRun(runId: string): Promise<Run | null> {
+    const sql =
+      `SELECT id, url, ` +
+      `JSON_UNQUOTE(JSON_EXTRACT(\`SERVER\`, '$.REQUEST_METHOD')) AS method, ` +
+      `main_wt AS wall_us, main_cpu AS cpu_us, ` +
+      `main_mu AS mu_bytes, main_pmu AS pmu_bytes, ` +
+      `request_ts, profile ` +
+      `FROM results WHERE id = ? LIMIT 1`;
+    const [rows] = await this.pool.query(sql, [runId]);
+    const row = (rows as Array<Record<string, unknown>>)[0];
+    if (!row) return null;
+
+    const profileRaw = row.profile;
+    let profile: Record<string, FunctionStats>;
+    try {
+      profile = typeof profileRaw === "string" ? JSON.parse(profileRaw) : (profileRaw as Record<string, FunctionStats>);
+    } catch (err) {
+      throw new Error(`Run ${runId}: profile JSON parse failed — ${(err as Error).message}`);
+    }
+
+    return {
+      meta: {
+        runId: String(row.id),
+        url: String(row.url),
+        method: String(row.method ?? ""),
+        wallUs: Number(row.wall_us ?? 0),
+        cpuUs: Number(row.cpu_us ?? 0),
+        timestamp: new Date(Number(row.request_ts) * 1000),
+      },
+      totals: {
+        wallUs: Number(row.wall_us ?? 0),
+        cpuUs: Number(row.cpu_us ?? 0),
+        muBytes: Number(row.mu_bytes ?? 0),
+        pmuBytes: Number(row.pmu_bytes ?? 0),
+      },
+      profile,
+    };
   }
 
   async aggregateByUrl(_filter: RunFilter): Promise<UrlAggregate[]> {
