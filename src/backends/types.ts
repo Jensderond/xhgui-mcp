@@ -1,4 +1,5 @@
 export interface Backend {
+  ping(): Promise<void>;
   listRuns(filter: RunFilter): Promise<RunMeta[]>;
   getRun(runId: string): Promise<Run | null>;
   aggregateByUrl(filter: RunFilter): Promise<UrlAggregate[]>;
@@ -17,7 +18,8 @@ export interface RunFilter {
 
 export interface RunMeta {
   runId: string;
-  url: string;
+  url: string;        // Full URL including query string.
+  simpleUrl: string;  // URL with query string stripped (xhgui's normalized form).
   method: string;
   wallUs: number;
   cpuUs: number;

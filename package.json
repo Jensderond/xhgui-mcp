@@ -1,5 +1,5 @@
 {
-  "name": "xhgui-mcp",
+  "name": "@jsdr/xhgui-mcp",
   "version": "0.1.0",
   "description": "MCP server for querying XHGui profiling data",
   "type": "module",
@@ -9,13 +9,26 @@
   "files": [
     "dist",
     "README.md",
-    "docs/design.md"
+    "docs/design.md",
+    "LICENSE"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jensderond/xhgui-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Jensderond/xhgui-mcp/issues"
+  },
+  "homepage": "https://github.com/Jensderond/xhgui-mcp#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc && chmod +x dist/server.js",
     "start": "node dist/server.js",
     "dev": "tsc --watch",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

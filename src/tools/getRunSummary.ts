@@ -5,31 +5,50 @@ import {
   matchHotspots,
   topByInclusive,
   topBySelf,
-  type HotspotEntry,
-  type TopEntry,
 } from "../format/hotspots.js";
 
 export const getRunSummaryInputSchema = z.object({
   run_id: z.string().min(1).describe("xhgui run id"),
   top_n: z.number().int().positive().max(100).default(15)
     .describe("How many top functions to return per list (1–100, default 15)"),
+  include_full_url: z.boolean().default(false)
+    .describe("Include the raw URL with query string as `url_full`. Off by default: query strings can contain tokens/PII."),
+});
+
+const topEntrySchema = z.object({
+  symbol: z.string(),
+  ct: z.number(),
+  inclMs: z.number(),
+  selfMs: z.number().nullable(),
+});
+
+const hotspotEntrySchema = topEntrySchema.extend({
+  category: z.string(),
+});
+
+export const getRunSummaryOutputSchema = z.object({
+  url: z.string().describe("Normalized URL with query string stripped."),
+  url_full: z.string().optional().describe("Raw URL with query string. Only present when include_full_url=true."),
+  method: z.string(),
+  timestamp: z.string(),
+  totals: z.object({
+    wall_ms: z.number(),
+    cpu_ms: z.number(),
+    memory_kb: z.number(),
+    peak_memory_kb: z.number(),
+  }),
+  top_by_inclusive: z.array(topEntrySchema),
+  top_by_self: z.array(topEntrySchema),
+  hotspots: z.array(hotspotEntrySchema).optional(),
+  warnings: z.array(z.string()).optional(),
 });
 
 export type GetRunSummaryInput = z.infer<typeof getRunSummaryInputSchema>;
+export type GetRunSummaryOutput = z.infer<typeof getRunSummaryOutputSchema>;
 
 export const getRunSummaryDescription =
-  "Summarize a single xhgui run: request totals, top functions by inclusive and self time, and optional hotspot matches.";
-
-export interface GetRunSummaryOutput {
-  url: string;
-  method: string;
-  timestamp: string;
-  totals: { wall_ms: number; cpu_ms: number; memory_kb: number; peak_memory_kb: number };
-  top_by_inclusive: TopEntry[];
-  top_by_self: TopEntry[];
-  hotspots?: HotspotEntry[];
-  warnings?: string[];
-}
+  "Summarize a single xhgui run: request totals, top functions by inclusive and self time, and optional hotspot matches. " +
+  "URL is returned with the query string stripped by default; pass include_full_url=true to receive the raw URL as `url_full`.";
 
 export async function runGetRunSummary(
   backend: Backend,
@@ -50,7 +69,8 @@ export async function runGetRunSummary(
   }
 
   const output: GetRunSummaryOutput = {
-    url: run.meta.url,
+    url: run.meta.simpleUrl,
+    ...(input.include_full_url ? { url_full: run.meta.url } : {}),
     method: run.meta.method,
     timestamp: run.meta.timestamp.toISOString(),
     totals: {

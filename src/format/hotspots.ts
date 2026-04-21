@@ -1,4 +1,4 @@
-import type { FunctionStats, Run } from "../backends/types.js";
+import type { Run } from "../backends/types.js";
 
 export interface SymbolStats {
   symbol: string;
