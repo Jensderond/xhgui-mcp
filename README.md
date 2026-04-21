@@ -7,7 +7,7 @@ Two tools today:
 - `list_runs` — recent runs, with filters (url, url_contains, method, time range, min wall).
 - `get_run_summary` — one call returns totals + top-N by inclusive / self time + optional hotspot matches for a given run.
 
-Status: pre-release. Design notes in `docs/design.md`.
+Published as [`@jsdr/xhgui-mcp`](https://www.npmjs.com/package/@jsdr/xhgui-mcp). Design notes in `docs/design.md`.
 
 ## Environment variables
 
@@ -21,19 +21,19 @@ Only the PDO backend (MySQL/MariaDB) is implemented today. MongoDB support is pl
 
 ## Install
 
-### Local (no npm publish)
+### From npm
 
-    git clone <this repo> xhgui-mcp
+    npx -y @jsdr/xhgui-mcp
+
+### From source
+
+    git clone https://github.com/Jensderond/xhgui-mcp.git
     cd xhgui-mcp
     npm install
     npm run build
     npm link
 
-After `npm link`, `xhgui-mcp` is on your npm global bin and `npx xhgui-mcp` resolves it.
-
-### After publish (future)
-
-    npx -y xhgui-mcp
+After `npm link`, the `xhgui-mcp` binary is on your global bin.
 
 ## Use with Claude Code
 
@@ -42,7 +42,7 @@ claude mcp add --transport stdio xhgui \
   -e XHGUI_BACKEND=pdo \
   -e XHGUI_PDO_DSN="mysql://db:db@127.0.0.1:32789/xhgui" \
   -e XHGUI_HOTSPOT_PATTERNS="ElementQuery::one,ElementQuery::all,internalExecute,getAttribute,Container::build,renderTemplate" \
-  -- npx -y xhgui-mcp
+  -- npx -y @jsdr/xhgui-mcp
 ```
 
 Equivalent `.mcp.json`:
@@ -52,7 +52,7 @@ Equivalent `.mcp.json`:
   "mcpServers": {
     "xhgui": {
       "command": "npx",
-      "args": ["-y", "xhgui-mcp"],
+      "args": ["-y", "@jsdr/xhgui-mcp"],
       "env": {
         "XHGUI_BACKEND": "pdo",
         "XHGUI_PDO_DSN": "mysql://db:db@127.0.0.1:32789/xhgui",
