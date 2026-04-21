@@ -7,3 +7,4 @@ dist/
 .agents/
 .claude/
 skills-lock.json
+e2e-probe.mjs
