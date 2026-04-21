@@ -6,6 +6,7 @@ import { loadConfig } from "./config.js";
 import type { Backend } from "./backends/types.js";
 import { PdoBackend } from "./backends/pdo.js";
 import { listRunsToolDefinition, runListRuns } from "./tools/listRuns.js";
+import { getRunSummaryToolDefinition, runGetRunSummary } from "./tools/getRunSummary.js";
 
 function log(obj: Record<string, unknown>): void {
   process.stderr.write(JSON.stringify({ ts: new Date().toISOString(), ...obj }) + "\n");
@@ -33,18 +34,30 @@ async function main(): Promise<void> {
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [listRunsToolDefinition],
+    tools: [listRunsToolDefinition, getRunSummaryToolDefinition],
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const started = Date.now();
     try {
+      let result: unknown;
       if (req.params.name === "list_runs") {
-        const result = await runListRuns(backend, req.params.arguments ?? {});
-        log({ event: "tool_ok", tool: req.params.name, duration_ms: Date.now() - started });
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        result = await runListRuns(backend, req.params.arguments ?? {});
+      } else if (req.params.name === "get_run_summary") {
+        result = await runGetRunSummary(backend, config.hotspotPatterns, req.params.arguments ?? {});
+      } else {
+        throw new Error(`Unknown tool: ${req.params.name}`);
       }
-      throw new Error(`Unknown tool: ${req.params.name}`);
+      log({
+        event: "tool_ok",
+        tool: req.params.name,
+        duration_ms: Date.now() - started,
+        run_id:
+          typeof req.params.arguments === "object" && req.params.arguments !== null
+            ? (req.params.arguments as Record<string, unknown>).run_id
+            : undefined,
+      });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     } catch (err) {
       log({
         event: "tool_err",
