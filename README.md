@@ -63,6 +63,47 @@ Equivalent `.mcp.json`:
 }
 ```
 
+## Use with Codex
+
+Codex uses stdio automatically when the server is configured with a command after `--`.
+Do not pass Claude's `--transport stdio` flag to the MCP server command.
+
+From npm:
+
+```bash
+codex mcp add xhgui \
+  --env XHGUI_BACKEND=pdo \
+  --env XHGUI_PDO_DSN="mysql://db:db@127.0.0.1:32789/xhgui" \
+  --env XHGUI_HOTSPOT_PATTERNS="ElementQuery::one,ElementQuery::all,internalExecute,getAttribute,Container::build,renderTemplate" \
+  -- npx -y @jsdr/xhgui-mcp
+```
+
+From a local checkout:
+
+```bash
+npm install
+npm run build
+codex mcp add xhgui \
+  --env XHGUI_BACKEND=pdo \
+  --env XHGUI_PDO_DSN="mysql://db:db@127.0.0.1:32789/xhgui" \
+  --env XHGUI_HOTSPOT_PATTERNS="ElementQuery::one,ElementQuery::all,internalExecute,getAttribute,Container::build,renderTemplate" \
+  -- node /absolute/path/to/xhgui-mcp/dist/server.js
+```
+
+If you previously added a broken entry, remove it first:
+
+```bash
+codex mcp remove xhgui
+```
+
+Check the configured command with:
+
+```bash
+codex mcp get xhgui
+```
+
+For stdio servers, `codex mcp list` can show `Auth Unsupported`. That is expected: auth/login is only relevant for remote HTTP MCP servers, not for a local stdio process.
+
 ## Use with ddev
 
 The MCP doesn't know about ddev — point the DSN at ddev's host-mapped DB port.
